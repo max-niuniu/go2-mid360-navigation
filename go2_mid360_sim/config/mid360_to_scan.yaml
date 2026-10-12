@@ -1,0 +1,19 @@
+mid360_cloud_to_scan:
+  ros__parameters:
+    use_sim_time: true
+    target_frame: base_link
+    transform_tolerance: 0.05
+
+    # Horizontal slice relative to base_link. Tune these two values in RViz
+    # if the robot body/legs appear or low obstacles are missing.
+    min_height: -0.15
+    max_height: 0.50
+
+    angle_min: -3.141592653589793
+    angle_max: 3.141592653589793
+    angle_increment: 0.008726646259972
+    scan_time: 0.10
+    range_min: 0.30
+    range_max: 30.0
+    use_inf: true
+    inf_epsilon: 1.0

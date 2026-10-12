@@ -1,0 +1,12 @@
+# Go2 head mounting base; estimated from the mounting guide and body mesh.
+# xyz in metres, rpy in radians. Adjust to measured hardware extrinsics if needed.
+enabled: true
+mount_xyz: [0.300, 0.0, 0.078]
+mount_rpy: [0.0, 0.0, 0.0]
+width: 640
+height: 360
+update_rate: 15.0
+color_hfov: 1.211258500884
+depth_hfov: 1.500983156715
+min_depth: 0.105
+max_depth: 10.0

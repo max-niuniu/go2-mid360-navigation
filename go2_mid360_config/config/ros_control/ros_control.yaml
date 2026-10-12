@@ -1,0 +1,46 @@
+controller_manager:
+  ros__parameters:
+    use_sim_time: True
+    update_rate: 250  # Hz
+
+    joint_states_controller:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_group_effort_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_group_effort_controller:
+  ros__parameters:
+    use_sim_time: True
+    joints:
+        - lf_hip_joint
+        - lf_upper_leg_joint
+        - lf_lower_leg_joint
+        - rf_hip_joint
+        - rf_upper_leg_joint
+        - rf_lower_leg_joint
+        - lh_hip_joint
+        - lh_upper_leg_joint
+        - lh_lower_leg_joint
+        - rh_hip_joint
+        - rh_upper_leg_joint
+        - rh_lower_leg_joint
+    command_interfaces:
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+    
+    gains:
+      lf_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      lf_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      lf_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      rf_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      rf_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      rf_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      lh_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      lh_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      lh_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      rh_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      rh_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}
+      rh_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5, ff_velocity_scale: 1.0}

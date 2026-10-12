@@ -1,0 +1,25 @@
+repositories:
+  champ:
+    type: git
+    url: https://github.com/chvmp/champ.git
+    version: 049b33ccaf77847bbea168cbb0a11c260ce119cd
+  Livox-SDK2:
+    type: git
+    url: https://github.com/Livox-SDK/Livox-SDK2.git
+    version: f5d9375f84efe2b15bc0a052d3e18482ed13adf4
+  livox_ros_driver2:
+    type: git
+    url: https://github.com/Livox-SDK/livox_ros_driver2.git
+    version: 13eb05e4e6dd7a765b934d0c5fd6236676a57b49
+  livox_laser_simulation_ros2:
+    type: git
+    url: https://github.com/LCAS/livox_laser_simulation_ros2.git
+    version: dbac363e867676efbe7394df32fc3a90f4dfa35e
+  FAST_LIO_ROS2:
+    type: git
+    url: https://github.com/Ericsii/FAST_LIO_ROS2.git
+    version: 2fffc570a25d0df172720bac034fbdb6a13d2162
+  geometry2:
+    type: git
+    url: https://github.com/ros2/geometry2.git
+    version: 404b7224d623d614f18fa9738dbf1716403d857e

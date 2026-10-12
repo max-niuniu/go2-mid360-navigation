@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find ros2_livox_simulation)/urdf/mid360.xacro"/>
+
+  <!-- Go2-specific bracket assembly; the original Livox sensor stays unchanged. -->
+  <xacro:macro name="go2_mid360_assembly" params="parent">
+    <xacro:property name="mount" value="${xacro.load_yaml('$(find go2_mid360_description)/config/mid360_mount.yaml')}"/>
+    <joint name="mid360_mount_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="mid360_mount_link"/>
+      <origin xyz="${' '.join(map(str, mount['xyz']))}"
+              rpy="${' '.join(str(a*pi/180.0) for a in mount['rpy_degrees'])}"/>
+    </joint>
+    <!-- Origin is the sensor mesh origin, not a screw or plate corner. -->
+    <link name="mid360_mount_link">
+      <visual name="mid360_mount_base">
+        <geometry>
+          <mesh filename="file://$(find go2_mid360_description)/meshes/mid360_mount/mount_only.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="mid360_mount_black"><color rgba="0.055 0.06 0.065 1"/></material>
+      </visual>
+      <visual name="mid360_guard">
+        <geometry>
+          <mesh filename="file://$(find go2_mid360_description)/meshes/mid360_mount/guard_only.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="mid360_mount_black"><color rgba="0.055 0.06 0.065 1"/></material>
+      </visual>
+      <!-- Simple rear standoffs bridge the gap to this Go2 body mesh. No screws. -->
+      <visual name="mid360_rear_support_left">
+        <origin xyz="0.066 0.033 ${-0.0546-mount['rear_spacer_length']/2}"/>
+        <geometry><cylinder radius="0.004" length="${mount['rear_spacer_length']}"/></geometry>
+        <material name="mid360_mount_black"><color rgba="0.055 0.06 0.065 1"/></material>
+      </visual>
+      <visual name="mid360_rear_support_right">
+        <origin xyz="0.066 -0.033 ${-0.0546-mount['rear_spacer_length']/2}"/>
+        <geometry><cylinder radius="0.004" length="${mount['rear_spacer_length']}"/></geometry>
+        <material name="mid360_mount_black"><color rgba="0.055 0.06 0.065 1"/></material>
+      </visual>
+      <!-- Negligible placeholder inertia keeps the visual fixed link in Gazebo.
+           This accessory is not a calibrated dynamics or collision model. -->
+      <inertial>
+        <mass value="0.001"/>
+        <inertia ixx="0.000001" ixy="0" ixz="0" iyy="0.000001" iyz="0" izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <gazebo reference="mid360_mount_link">
+      <material>Gazebo/Black</material>
+    </gazebo>
+
+    <xacro:mid360 name="mid360_link" parent="mid360_mount_link" topic="/livox/lidar"
+                  update_rate="5" samples="4000" downsample="1"
+                  range_max="30.0" noise_stddev="0.01">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:mid360>
+  </xacro:macro>
+</robot>

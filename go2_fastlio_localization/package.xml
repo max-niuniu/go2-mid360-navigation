@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go2_fastlio_localization</name>
+  <version>0.2.0</version>
+  <description>go2 fastlio localization for the Go2 MID360 FAST-LIO Nav2 project.</description>
+  <maintainer email="tianwei.niu@cau.edu.cn">Tianwei Niu</maintainer>
+  <license>BSD-3-Clause</license>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>go2_mid360_sim</exec_depend>
+  <exec_depend>go2_mid360_description</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>fast_lio</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>sensor_msgs_py</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

@@ -1,0 +1,97 @@
+diff --git a/champ_base/include/quadruped_controller.h b/champ_base/include/quadruped_controller.h
+index 05f0250..4c1c9d3 100644
+--- a/champ_base/include/quadruped_controller.h
++++ b/champ_base/include/quadruped_controller.h
+@@ -65,6 +65,9 @@ class QuadrupedController: public rclcpp::Node
+     
+     champ::Velocities req_vel_;
+     champ::Pose req_pose_;
++    rclcpp::Time last_cmd_vel_time_;
++    double cmd_vel_timeout_{0.5};
++    bool cmd_vel_received_{false};
+ 
+     champ::GaitConfig gait_config_;
+ 
+@@ -92,4 +95,4 @@ class QuadrupedController: public rclcpp::Node
+         QuadrupedController();
+ };
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/champ_base/src/quadruped_controller.cpp b/champ_base/src/quadruped_controller.cpp
+index 53c9b4a..449345e 100644
+--- a/champ_base/src/quadruped_controller.cpp
++++ b/champ_base/src/quadruped_controller.cpp
+@@ -65,6 +65,8 @@ QuadrupedController::QuadrupedController():
+     this->get_parameter("joint_controller_topic",      joint_control_topic);
+     this->get_parameter("loop_rate",                   loop_rate);
+     this->get_parameter("urdf",                        urdf);
++    this->get_parameter_or("cmd_vel_timeout", cmd_vel_timeout_, 0.5);
++    last_cmd_vel_time_ = clock_.now();
+     
+     cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
+         "cmd_vel/smooth", 10, std::bind(&QuadrupedController::cmdVelCallback_, this,  std::placeholders::_1));
+@@ -100,6 +102,15 @@ QuadrupedController::QuadrupedController():
+ 
+ void QuadrupedController::controlLoop_()
+ {
++    if (cmd_vel_received_ &&
++        (clock_.now() - last_cmd_vel_time_).seconds() > cmd_vel_timeout_)
++    {
++        req_vel_.linear.x = 0.0;
++        req_vel_.linear.y = 0.0;
++        req_vel_.angular.z = 0.0;
++        cmd_vel_received_ = false;
++    }
++
+     float target_joint_positions[12];
+     geometry::Transformation target_foot_positions[4];
+     bool foot_contacts[4];
+@@ -118,6 +129,8 @@ void QuadrupedController::cmdVelCallback_(const geometry_msgs::msg::Twist::Share
+     req_vel_.linear.x = msg->linear.x;
+     req_vel_.linear.y = msg->linear.y;
+     req_vel_.angular.z = msg->angular.z;
++    last_cmd_vel_time_ = clock_.now();
++    cmd_vel_received_ = true;
+ }
+ 
+ void QuadrupedController::cmdPoseCallback_(const geometry_msgs::msg::Pose::SharedPtr msg)
+diff --git a/champ_bringup/launch/bringup.launch.py b/champ_bringup/launch/bringup.launch.py
+index c1a9487..1b856e7 100644
+--- a/champ_bringup/launch/bringup.launch.py
++++ b/champ_bringup/launch/bringup.launch.py
+@@ -210,6 +210,7 @@ def generate_launch_description():
+         executable="ekf_node",
+         name="footprint_to_odom_ekf",
+         output="screen",
++        condition=IfCondition(LaunchConfiguration("publish_odom_tf")),
+         parameters=[
+             {"base_link_frame": LaunchConfiguration("base_link_frame")},
+             {"use_sim_time": LaunchConfiguration("use_sim_time")},
+diff --git a/champ_config/CMakeLists.txt b/champ_config/CMakeLists.txt
+index f0fe582..7b55f48 100644
+--- a/champ_config/CMakeLists.txt
++++ b/champ_config/CMakeLists.txt
+@@ -4,7 +4,7 @@ project(champ_config)
+ find_package(ament_cmake REQUIRED)
+ 
+ install(
+-  DIRECTORY launch config maps worlds
++  DIRECTORY launch config worlds
+   DESTINATION share/${PROJECT_NAME}
+ )
+ 
+diff --git a/champ_config/launch/gazebo.launch.py b/champ_config/launch/gazebo.launch.py
+index f11e075..29573fc 100644
+--- a/champ_config/launch/gazebo.launch.py
++++ b/champ_config/launch/gazebo.launch.py
+@@ -34,7 +34,7 @@ def generate_launch_description():
+     gait_config = os.path.join(config_pkg_share, "config/gait/gait.yaml")
+     links_config = os.path.join(config_pkg_share, "config/links/links.yaml")
+     default_model_path = os.path.join(descr_pkg_share, "urdf/champ.urdf.xacro")
+-    default_world_path = os.path.join(config_pkg_share, "worlds/outdoor.world")
++    default_world_path = os.path.join(config_pkg_share, "worlds/default.world")
+ 
+     declare_use_sim_time = DeclareLaunchArgument(
+         "use_sim_time",

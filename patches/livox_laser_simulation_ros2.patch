@@ -1,0 +1,191 @@
+diff --git a/src/livox_points_plugin.cpp b/src/livox_points_plugin.cpp
+index 29d6677..a317a3a 100644
+--- a/src/livox_points_plugin.cpp
++++ b/src/livox_points_plugin.cpp
+@@ -71,6 +71,12 @@ namespace gazebo
+         node->Init(raySensor->WorldName());
+         // PointCloud2 publisher
+         cloud2_pub = node_->create_publisher<sensor_msgs::msg::PointCloud2>(curr_scan_topic, 10);
++        // FAST-LIO's Livox path consumes CustomMsg and preserves the point
++        // timestamp supplied by the sensor.  Gazebo evaluates a complete ray
++        // batch at one simulation instant, so every point intentionally uses
++        // offset_time = 0 below.
++        custom_pub = node_->create_publisher<livox_ros_driver2::msg::CustomMsg>(
++            curr_scan_topic + "_custom", 10);
+ 
+         scanPub = node->Advertise<msgs::LaserScanStamped>(curr_scan_topic+"laserscan", 50);
+ 
+@@ -145,8 +151,9 @@ namespace gazebo
+                 "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+                 "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+                 "intensity", 1, sensor_msgs::msg::PointField::FLOAT32,
+-                "tag", 1, sensor_msgs::msg::PointField::UINT16,
+-                "line", 1, sensor_msgs::msg::PointField::UINT16
++                // FAST-LIO's LivoxPointXyzitl layout defines these as bytes.
++                "tag", 1, sensor_msgs::msg::PointField::UINT8,
++                "line", 1, sensor_msgs::msg::PointField::UINT8
+             );
+             modifier.resize(num_points);
+ 
+@@ -155,9 +162,18 @@ namespace gazebo
+             sensor_msgs::PointCloud2Iterator<float> iter_y(cloud2, "y");
+             sensor_msgs::PointCloud2Iterator<float> iter_z(cloud2, "z");
+             sensor_msgs::PointCloud2Iterator<float> iter_intensity(cloud2, "intensity");
+-            sensor_msgs::PointCloud2Iterator<uint16_t> iter_tag(cloud2, "tag");
+-            sensor_msgs::PointCloud2Iterator<uint16_t> iter_line(cloud2, "line");
+-
++            sensor_msgs::PointCloud2Iterator<uint8_t> iter_tag(cloud2, "tag");
++            sensor_msgs::PointCloud2Iterator<uint8_t> iter_line(cloud2, "line");
++
++            livox_ros_driver2::msg::CustomMsg custom;
++            custom.header = cloud2.header;
++            custom.timebase = static_cast<uint64_t>(
++                rclcpp::Time(cloud2.header.stamp).nanoseconds());
++            custom.point_num = static_cast<uint32_t>(num_points);
++            custom.lidar_id = 0;
++            custom.points.resize(num_points);
++
++            int point_index = 0;
+             for (auto &pair : points_pair) {
+                 auto range = rayShape->GetRange(pair.first);
+                 auto intensity = rayShape->GetRetro(pair.first);  // or set to 1.0
+@@ -179,12 +195,22 @@ namespace gazebo
+                 *iter_tag = 0;   // dummy value
+                 *iter_line = 0;  // dummy value
+ 
++                auto &custom_point = custom.points[point_index++];
++                custom_point.offset_time = 0;
++                custom_point.x = static_cast<float>(point.X());
++                custom_point.y = static_cast<float>(point.Y());
++                custom_point.z = static_cast<float>(point.Z());
++                custom_point.reflectivity = 0;
++                custom_point.tag = 0;
++                custom_point.line = 0;
++
+                 ++iter_x; ++iter_y; ++iter_z;
+                 ++iter_intensity; ++iter_tag; ++iter_line;
+             }
+ 
+             // Publish
+             cloud2_pub->publish(cloud2);
++            custom_pub->publish(custom);
+         }
+     }
+ 
+diff --git a/urdf/mid360.xacro b/urdf/mid360.xacro
+index 1e536ea..00a2c21 100644
+--- a/urdf/mid360.xacro
++++ b/urdf/mid360.xacro
+@@ -3,7 +3,7 @@
+ 
+   <xacro:property name="M_PI" value="3.1415926"/> 
+   <xacro:property name="laser_min_range" value="0.1"/>
+-  <xacro:property name="laser_max_range" value="200.0"/>
++  <xacro:property name="laser_max_range" value="30.0"/>
+   <xacro:property name="samples" value="40000"/>
+   <xacro:property name="resolution" value="0.002"/>
+   <xacro:property name="noise_mean" value="0.0"/>
+@@ -24,13 +24,20 @@
+ 
+ 
+ 
+-  <xacro:macro name="mid360" params="name:='' parent:= 'base_link' topic:='mid360' *origin ">
++  <!--
++    ROS 2 port of Livox's Gazebo-classic MID-360 ray plugin.  The defaults
++    are deliberately lower than the original 40k points / 10 Hz setting so
++    Gazebo 11 remains usable; callers may raise them for fidelity tests.
++  -->
++  <xacro:macro name="mid360" params="name:='' parent:='base_link' topic:='mid360' update_rate:=5 samples:=4000 downsample:=1 range_max:=30.0 noise_stddev:=0.01 *origin">
+ 
+ <link name="${name}">
+ <xacro:box_inertia m="${length}" w="${width}" d="${length}" h="${height}"/>
+   <visual>
+         <geometry>
+-            <box size="${length} ${width} ${height}"/>
++            <!-- The DAE already contains its metre scale and upright orientation. -->
++            <mesh filename="file://$(find ros2_livox_simulation)/meshes/mid-360-scaled.dae"
++                  scale="1 1 1"/>
+         </geometry>
+   </visual>
+ </link>
+@@ -44,45 +51,46 @@
+     <gazebo reference="${name}">
+       <sensor type="ray" name="${name}">
+         <pose>0 0 0 0 0 0</pose>
+-        <visualize>true</visualize>
+-        <update_rate>10</update_rate>
+-        <!-- This ray plgin is only for visualization. -->
++        <!-- This custom RayPlugin has no Gazebo transport subscriber to
++             activate it, so force periodic scan callbacks. -->
++        <always_on>true</always_on>
++        <visualize>false</visualize>
++        <update_rate>${update_rate}</update_rate>
+         <plugin name="${name}_plugin" filename="libros2_livox.so">
+-			<ray>
+-			  <scan>
+-				<horizontal>
+-				<samples>100</samples>
+-				<resolution>1</resolution>
+-				<min_angle>${0}</min_angle>
+-				<max_angle>${2*M_PI}</max_angle>
+-				</horizontal>
+-				<vertical>
+-				<samples>360</samples>
+-				<resolution>1</resolution>
+-				<min_angle>${-7.22/180*M_PI}</min_angle>
+-				<max_angle>${55.22/180*M_PI}</max_angle>
+-				</vertical>
+-			  </scan>
+-			  <range>
+-				<min>${laser_min_range}</min>
+-				<max>${laser_max_range}</max>
+-				<resolution>${resolution}</resolution>
+-			  </range>
+-			  <noise>
+-				<type>gaussian</type>
+-				<mean>${noise_mean}</mean>
+-				<stddev>${noise_stddev}</stddev>
+-			  </noise>
+-			</ray>
++          <ray>
++            <scan>
++              <horizontal>
++                <samples>100</samples>
++                <resolution>1</resolution>
++                <min_angle>${0}</min_angle>
++                <max_angle>${2*M_PI}</max_angle>
++              </horizontal>
++              <vertical>
++                <samples>360</samples>
++                <resolution>1</resolution>
++                <min_angle>${-7.22/180*M_PI}</min_angle>
++                <max_angle>${55.22/180*M_PI}</max_angle>
++              </vertical>
++            </scan>
++            <range>
++              <min>${laser_min_range}</min>
++              <max>${range_max}</max>
++              <resolution>${resolution}</resolution>
++            </range>
++            <noise>
++              <type>gaussian</type>
++              <mean>${noise_mean}</mean>
++              <stddev>${noise_stddev}</stddev>
++            </noise>
++          </ray>
+           <visualize>false</visualize>
+-		  <samples>${samples}</samples>
+-		  <downsample>1</downsample>
+-		  <csv_file_name>$(find ros2_livox_simulation)/scan_mode/mid360.csv</csv_file_name>
+-		  <topic>${topic}</topic>
++          <samples>${samples}</samples>
++          <downsample>${downsample}</downsample>
++          <csv_file_name>$(find ros2_livox_simulation)/scan_mode/mid360.csv</csv_file_name>
++          <topic>${topic}</topic>
+         </plugin>
+       </sensor>
+     </gazebo>
+   </xacro:macro>
+ 
+ </robot>
+-

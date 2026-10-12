@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="go2_d435i" params="parent">
+    <xacro:property name="cfg" value="${xacro.load_yaml('$(find go2_mid360_description)/config/d435i.yaml')}"/>
+    <xacro:if value="${cfg['enabled']}">
+      <joint name="camera_mount_joint" type="fixed">
+        <parent link="${parent}"/><child link="camera_mount_link"/>
+        <origin xyz="${' '.join(map(str, cfg['mount_xyz']))}" rpy="${' '.join(map(str, cfg['mount_rpy']))}"/>
+      </joint>
+      <link name="camera_mount_link">
+        <inertial><mass value="0.02"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+        <visual>
+          <origin xyz="-0.010 0 0"/>
+          <geometry><box size="0.050 0.055 0.004"/></geometry>
+          <material name="camera_mount_black"><color rgba="0.08 0.08 0.08 1"/></material>
+        </visual>
+        <visual>
+          <origin xyz="0.012 0 0.016"/>
+          <geometry><box size="0.004 0.055 0.032"/></geometry>
+          <material name="camera_mount_black"/>
+        </visual>
+        <visual>
+          <origin xyz="0.026 0 0.016"/>
+          <geometry><box size="0.025 0.055 0.004"/></geometry>
+          <material name="camera_mount_black"/>
+        </visual>
+      </link>
+      <joint name="camera_joint" type="fixed">
+        <parent link="camera_mount_link"/><child link="camera_link"/>
+        <origin xyz="0.035 0.0175 0.030"/>
+      </joint>
+      <link name="camera_link">
+        <inertial>
+          <origin xyz="0 -0.0175 0"/><mass value="0.072"/>
+          <inertia ixx="0.00005235" ixy="0" ixz="0" iyy="0.00000752" iyz="0" izz="0.00005237"/>
+        </inertial>
+        <visual>
+          <origin xyz="0.0043 -0.0175 0" rpy="${pi/2} 0 ${pi/2}"/>
+          <geometry><mesh filename="file://$(find go2_mid360_description)/meshes/d435i/d435.dae"/></geometry>
+        </visual>
+        <collision>
+          <origin xyz="0 -0.0175 0"/>
+          <geometry><box size="0.02505 0.090 0.025"/></geometry>
+        </collision>
+      </link>
+      <joint name="camera_depth_joint" type="fixed">
+        <parent link="camera_link"/><child link="camera_depth_frame"/>
+      </joint>
+      <link name="camera_depth_frame"/>
+      <joint name="camera_depth_optical_joint" type="fixed">
+        <parent link="camera_depth_frame"/><child link="camera_depth_optical_frame"/>
+        <origin rpy="${-pi/2} 0 ${-pi/2}"/>
+      </joint>
+      <link name="camera_depth_optical_frame"/>
+      <joint name="camera_color_joint" type="fixed">
+        <parent link="camera_link"/><child link="camera_color_frame"/>
+        <origin xyz="0 0.015 0"/>
+      </joint>
+      <link name="camera_color_frame"/>
+      <joint name="camera_color_optical_joint" type="fixed">
+        <parent link="camera_color_frame"/><child link="camera_color_optical_frame"/>
+        <origin rpy="${-pi/2} 0 ${-pi/2}"/>
+      </joint>
+      <link name="camera_color_optical_frame"/>
+      <gazebo reference="camera_mount_link"><material>Gazebo/Black</material></gazebo>
+      <gazebo reference="camera_color_frame">
+        <sensor name="d435i_color" type="camera">
+          <always_on>true</always_on><update_rate>${cfg['update_rate']}</update_rate><visualize>false</visualize>
+          <camera>
+            <horizontal_fov>${cfg['color_hfov']}</horizontal_fov>
+            <image><width>${cfg['width']}</width><height>${cfg['height']}</height><format>R8G8B8</format></image>
+            <clip><near>0.02</near><far>${cfg['max_depth']}</far></clip>
+          </camera>
+          <plugin name="d435i_color" filename="libgazebo_ros_camera.so">
+            <ros><namespace>/camera</namespace></ros>
+            <camera_name>color</camera_name><frame_name>camera_color_optical_frame</frame_name>
+          </plugin>
+        </sensor>
+      </gazebo>
+      <gazebo reference="camera_link">
+        <sensor name="d435i_depth" type="depth">
+          <always_on>true</always_on><update_rate>${cfg['update_rate']}</update_rate><visualize>false</visualize>
+          <camera>
+            <horizontal_fov>${cfg['depth_hfov']}</horizontal_fov>
+            <image><width>${cfg['width']}</width><height>${cfg['height']}</height><format>R8G8B8</format></image>
+            <clip><near>${cfg['min_depth']}</near><far>${cfg['max_depth']}</far></clip>
+          </camera>
+          <plugin name="d435i_depth" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/camera</namespace>
+              <remapping>depth/image_raw:=depth/preview/image_raw</remapping>
+              <remapping>depth/camera_info:=depth/preview/camera_info</remapping>
+              <remapping>depth/depth/image_raw:=depth/image_raw</remapping>
+              <remapping>depth/depth/camera_info:=depth/camera_info</remapping>
+            </ros>
+            <camera_name>depth</camera_name><frame_name>camera_depth_optical_frame</frame_name>
+            <min_depth>${cfg['min_depth']}</min_depth><max_depth>${cfg['max_depth']}</max_depth>
+          </plugin>
+        </sensor>
+      </gazebo>
+    </xacro:if>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>go2_mid360_config</name>
+  <version>0.1.0</version>
+  <description>Go2 gait, joint, controller and DDS configuration.</description>
+
+  <maintainer email="tianwei.niu@cau.edu.cn">Tianwei Niu</maintainer>
+  <author>Anuj Jain</author>
+
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

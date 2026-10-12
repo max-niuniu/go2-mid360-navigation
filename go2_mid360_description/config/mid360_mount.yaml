@@ -1,0 +1,9 @@
+# MID360 assembly pose relative to base_link (metres, degrees).
+# imu_link is currently coincident with base_link; FAST-LIO uses this same pose.
+# Approximate fit to the existing Go2 mesh, not a measured hardware calibration.
+xyz: [0.163, 0.0, 0.117]
+rpy_degrees: [0.0, -13.0, 180.0]
+# +X of the supplied sensor/mount mesh points toward its rear connector.
+# Yaw 180 degrees puts the connector and bent flange toward the robot rear.
+# The resulting sensor +Z tilts 13 degrees toward the robot front.
+rear_spacer_length: 0.022

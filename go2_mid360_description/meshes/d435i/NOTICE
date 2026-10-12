@@ -1,0 +1,6 @@
+RealSense D435/D435i mesh
+Source: https://github.com/realsenseai/realsense-ros
+Revision: 7a87097c499e3b0b69518d54a8e7a9ac1924e87c
+File: realsense2_description/meshes/d435.dae
+License: Apache-2.0 (see LICENSE). Mesh unchanged.
+Camera frame offsets follow realsense2_description/urdf/_d435.urdf.xacro.

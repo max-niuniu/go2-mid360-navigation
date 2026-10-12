@@ -1,0 +1,202 @@
+diff --git a/rviz/fastlio.rviz b/rviz/fastlio.rviz
+index d907d25..4cacc14 100644
+--- a/rviz/fastlio.rviz
++++ b/rviz/fastlio.rviz
+@@ -6,6 +6,8 @@ Panels:
+       Expanded:
+         - /Global Options1
+         - /Status1
++        - /CloudMap1
++        - /CloudMap1/Autocompute Value Bounds1
+       Splitter Ratio: 0.5
+     Tree Height: 549
+   - Class: rviz_common/Selection
+@@ -34,10 +36,54 @@ Visualization Manager:
+       Frame Timeout: 15
+       Frames:
+         All Enabled: true
++        base_footprint:
++          Value: true
++        base_link:
++          Value: true
+         body:
+           Value: true
+         camera_init:
+           Value: true
++        imu_link:
++          Value: true
++        lf_foot_link:
++          Value: true
++        lf_hip_link:
++          Value: true
++        lf_lower_leg_link:
++          Value: true
++        lf_upper_leg_link:
++          Value: true
++        lh_foot_link:
++          Value: true
++        lh_hip_link:
++          Value: true
++        lh_lower_leg_link:
++          Value: true
++        lh_upper_leg_link:
++          Value: true
++        mid360_link:
++          Value: true
++        mid360_mount_link:
++          Value: true
++        rf_foot_link:
++          Value: true
++        rf_hip_link:
++          Value: true
++        rf_lower_leg_link:
++          Value: true
++        rf_upper_leg_link:
++          Value: true
++        rh_foot_link:
++          Value: true
++        rh_hip_link:
++          Value: true
++        rh_lower_leg_link:
++          Value: true
++        rh_upper_leg_link:
++          Value: true
++        trunk:
++          Value: true
+       Marker Scale: 1
+       Name: TF
+       Show Arrows: true
+@@ -119,8 +165,8 @@ Visualization Manager:
+     - Alpha: 1
+       Autocompute Intensity Bounds: true
+       Autocompute Value Bounds:
+-        Max Value: 11.062739372253418
+-        Min Value: -13.864188194274902
++        Max Value: 9.915592193603516
++        Min Value: -0.21830123662948608
+         Value: true
+       Axis: Z
+       Channel Name: intensity
+@@ -128,7 +174,7 @@ Visualization Manager:
+       Color: 255; 255; 255
+       Color Transformer: AxisColor
+       Decay Time: 30
+-      Enabled: true
++      Enabled: false
+       Invert Rainbow: false
+       Max Color: 255; 255; 255
+       Max Intensity: 186
+@@ -149,7 +195,7 @@ Visualization Manager:
+         Value: /cloud_registered
+       Use Fixed Frame: true
+       Use rainbow: true
+-      Value: true
++      Value: false
+     - Alpha: 1
+       Autocompute Intensity Bounds: true
+       Autocompute Value Bounds:
+@@ -160,7 +206,7 @@ Visualization Manager:
+       Channel Name: intensity
+       Class: rviz_default_plugins/PointCloud2
+       Color: 255; 255; 255
+-      Color Transformer: Intensity
++      Color Transformer: ""
+       Decay Time: 0
+       Enabled: true
+       Invert Rainbow: false
+@@ -173,7 +219,7 @@ Visualization Manager:
+       Selectable: true
+       Size (Pixels): 3
+       Size (m): 0.10000000149011612
+-      Style: Flat Squares
++      Style: Points
+       Topic:
+         Depth: 5
+         Durability Policy: Volatile
+@@ -187,19 +233,19 @@ Visualization Manager:
+     - Alpha: 1
+       Autocompute Intensity Bounds: true
+       Autocompute Value Bounds:
+-        Max Value: -9999
+-        Min Value: 9999
++        Max Value: 64.03766632080078
++        Min Value: -141.4864501953125
+         Value: true
+       Axis: Z
+       Channel Name: intensity
+       Class: rviz_default_plugins/PointCloud2
+       Color: 255; 255; 255
+-      Color Transformer: AxisColor
++      Color Transformer: FlatColor
+       Decay Time: 0
+       Enabled: true
+       Invert Rainbow: false
+       Max Color: 255; 255; 255
+-      Max Intensity: 255
++      Max Intensity: 0
+       Min Color: 0; 0; 0
+       Min Intensity: 0
+       Name: CloudMap
+@@ -207,7 +253,7 @@ Visualization Manager:
+       Selectable: true
+       Size (Pixels): 3
+       Size (m): 0.05000000074505806
+-      Style: Flat Squares
++      Style: Points
+       Topic:
+         Depth: 5
+         Durability Policy: Volatile
+@@ -264,25 +310,25 @@ Visualization Manager:
+   Views:
+     Current:
+       Class: rviz_default_plugins/Orbit
+-      Distance: 216.99887084960938
++      Distance: 24.85609245300293
+       Enable Stereo Rendering:
+         Stereo Eye Separation: 0.05999999865889549
+         Stereo Focal Distance: 1
+         Swap Stereo Eyes: false
+         Value: false
+       Focal Point:
+-        X: -0.008504047989845276
+-        Y: -0.0005770106799900532
+-        Z: 0.034441977739334106
++        X: 0.9570724964141846
++        Y: 0.6983015537261963
++        Z: 0.3651660680770874
+       Focal Shape Fixed Size: true
+       Focal Shape Size: 0.05000000074505806
+       Invert Z Axis: false
+       Name: Current View
+       Near Clip Distance: 0.009999999776482582
+-      Pitch: 1.5697963237762451
++      Pitch: 0.37979647517204285
+       Target Frame: <Fixed Frame>
+       Value: Orbit (rviz_default_plugins)
+-      Yaw: 4.88355827331543
++      Yaw: 1.1485555171966553
+     Saved: ~
+ Window Geometry:
+   Displays:
+diff --git a/src/laserMapping.cpp b/src/laserMapping.cpp
+index d441261..84182fb 100644
+--- a/src/laserMapping.cpp
++++ b/src/laserMapping.cpp
+@@ -1164,6 +1164,17 @@ int main(int argc, char** argv)
+ 
+     if (rclcpp::ok())
+         rclcpp::shutdown();
++
++    // Keep Ctrl+C consistent with the map_save service.  The older shutdown
++    // path only wrote pcl_wait_save (an optional scan cache), which is empty
++    // when periodic scan saving is disabled.  The accumulated map used by
++    // the service is pcl_wait_pub.
++    if (pcd_save_en && !map_file_path.empty() && pcl_wait_pub->size() > 0)
++    {
++        cout << "Saving complete map to " << map_file_path << endl;
++        save_to_pcd();
++    }
++
+     /**************** save map ****************/
+     /* 1. make sure you have enough memories
+     /* 2. pcd save will largely influence the real-time performences **/
